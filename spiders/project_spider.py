@@ -6,6 +6,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+import os
 
 class ProjectSpider(scrapy.Spider):
     name = 'project'
@@ -21,28 +22,22 @@ class ProjectSpider(scrapy.Spider):
             # Open the webpage using Selenium
             driver.get(response.url)
 
-            # Use WebDriverWait to wait until the main form row is present
-            main_form_row = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, '//*[@id="reg-Projects"]/div/div'))
+            # Use WebDriverWait to wait until the form rows are present
+            form_rows = WebDriverWait(driver, 20).until(
+                EC.presence_of_all_elements_located((By.XPATH, '//*[@id="reg-Projects"]/div/div'))
             )
 
-            # Extract entries within the main form row
-            entries = main_form_row.find_elements(By.XPATH, '//*[@id="reg-Projects"]/div/div')
-
-            # Limit to the first 5 entries
-            for index, entry in enumerate(entries[:5], start=1):
-                # Extract the project name from the entry
-                project_name = entry.find_element(By.XPATH, '//*[@id="reg-Projects"]/div/div/div[1]/div/div/span[1]').text
-
-                # Print the project name
-                logging.info(f"Project Name ({index}): {project_name}")
+            # Iterate over each form row
+            for form_row in form_rows:
+                # Extract the project name from each form row
+                project_name = form_row.find_element(By.XPATH, '//*[@id="reg-Projects"]/div/div/div[1]/div/div/span[1]').text
 
                 # Click on the link to open the Application Preview page
-                application_link = entry.find_element(By.XPATH, '//*[@id="reg-Projects"]/div/div/div[1]/div/div/a')
+                application_link = form_row.find_element(By.XPATH, '//*[@id="reg-Projects"]/div/div/div[1]/div/div/a')
                 application_link.click()
 
                 # Wait for the Application Preview page to load
-                WebDriverWait(driver, 10).until(
+                WebDriverWait(driver, 20).until(
                     EC.presence_of_element_located((By.XPATH, '//*[@id="project-menu-html"]/div[2]/div[1]/div/table/tbody/tr[1]/td[2]'))
                 )
 
@@ -53,18 +48,22 @@ class ProjectSpider(scrapy.Spider):
                 permanent_address = driver.find_element(By.XPATH, '//*[@id="project-menu-html"]/div[2]/div[1]/div/table/tbody/tr[12]/td[2]/span').text
 
                 # Print the extracted details
+                logging.info(f"Project Name: {project_name}")
                 logging.info(f"Name: {name}")
                 logging.info(f"PAN No.: {pan_number}")
                 logging.info(f"GSTIN No.: {gstin_number}")
                 logging.info(f"Permanent Address: {permanent_address}")
 
                 # Write the details to a CSV file
-                with open('project_details.csv', 'a', newline='', encoding='utf-8') as csvfile:
+                csv_filename = 'project_details.csv'
+                file_exists = os.path.isfile(csv_filename)
+
+                with open(csv_filename, 'a', newline='', encoding='utf-8') as csvfile:
                     fieldnames = ['Project Name', 'Name', 'PAN No.', 'GSTIN No.', 'Permanent Address']
                     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-                    # Write header only if the file is empty
-                    if csvfile.tell() == 0:
+                    # Write header only if the file is empty or doesn't exist
+                    if not file_exists or csvfile.tell() == 0:
                         writer.writeheader()
 
                     writer.writerow({
