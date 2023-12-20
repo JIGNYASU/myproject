@@ -14,3 +14,5 @@
 
  #To run the script use the command - 
   [ scrapy crawl project ]
+
+ #The CSV file will be generated in the myproject directory called "project_details.csv"
